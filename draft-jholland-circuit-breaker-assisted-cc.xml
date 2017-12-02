@@ -4,11 +4,9 @@
 <!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
 
 <!ENTITY RFC0791 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.0791.xml">
-<!ENTITY RFC2113 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2113.xml">
 <!ENTITY RFC2119 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml">
 <!ENTITY RFC2357 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2357.xml">
 <!ENTITY RFC2460 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2460.xml">
-<!ENTITY RFC2711 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2711.xml">
 <!ENTITY RFC2784 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2784.xml">
 <!ENTITY RFC2827 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2827.xml">
 <!ENTITY RFC2914 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2914.xml">
@@ -26,6 +24,7 @@
 <!ENTITY RFC6807 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.6807.xml">
 <!ENTITY RFC7450 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.7450.xml">
 <!ENTITY RFC7761 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.7761.xml">
+<!ENTITY RFC8174 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.8174.xml">
 <!ENTITY I-D.ietf-tsvwg-rfc5405bis SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.ietf-tsvwg-rfc5405bis.xml">
 <!ENTITY I-D.ietf-tsvwg-circuit-breaker SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.ietf-tsvwg-circuit-breaker.xml">
 <!ENTITY IEEE.754.1985 SYSTEM "http://xml.resource.org/public/rfc/bibxml2/reference.IEEE.754.1985.xml">
@@ -56,7 +55,7 @@
 <?rfc subcompact="no" ?>
 <!-- keep one blank line between list items -->
 <!-- end of list of popular I-D processing instructions -->
-<rfc category="exp" docName="draft-jholland-cb-assisted-cc-00" ipr="trust200902">
+<rfc category="exp" docName="draft-jholland-cb-assisted-cc-01" ipr="trust200902">
  <!-- category values: std, bcp, info, exp, and historic
     ipr values: trust200902, noModificationTrust200902, noDerivativesTrust200902,
        or pre5378Trust200902
@@ -84,7 +83,7 @@
        <uri>https://www.akamai.com/</uri>
      </address>
    </author>
-   <date year="2016" />
+   <date year="2017" />
    <area>Transport</area>
    <workgroup>Transport Area Working Group</workgroup>
 
@@ -107,9 +106,9 @@
            activity (<xref target="I-D.ietf-tsvwg-circuit-breaker" />) when
            necessary for network health. CBACC is specifically designed to support
            protocols using IP multicast, particularly as a supplement to receiver-driven
-           congestion control protocols such as WEBRC <xref target="RFC3738" />,
-           to help affected networks rapidly detect and mitigate the impact of scenarios in
-           which a network is oversubscribed to flows which are not responsive to congestion.
+           congestion control protocols to help affected networks rapidly detect and mitigate
+           the impact of scenarios in which a network is oversubscribed to flows which are
+           not responsive to congestion.
        </t>
    </abstract>
  </front>
@@ -120,13 +119,15 @@
            This document specifies Circuit Breaker Assisted Congestion Control (CBACC).
        </t>
        <t>
-           CBACC is a congestion control building block designed for use with IP traffic
-           that has a known maximum bandwidth, which does not reduce its sending rate in response
-           to congestion. CBACC is specifically designed to supplement protocols using
-           WEBRC <xref target="RFC3738" /> or other receiver-driven multicast congestion
-           control systems that rely on well-behaved receivers to achieve congestion
-           control in a very highly scalable system (up to millions of receivers) without a
-           feedback path that reduces sending rates by senders.
+           CBACC is a congestion control building block designed for use with
+           IP traffic that has a known maximum bandwidth, which does not reduce
+           its sending rate in response to congestion. CBACC is specifically
+           designed to supplement protocols using receiver-driven multicast
+           congestion control systems that rely on well-behaved receivers to
+           achieve congestion control in a very highly scalable system (up to
+           millions of receivers) without a feedback path that reduces sending
+           rates by senders. Examples of congestion control systems fitting this
+           description include PLM, RLM, RLC, FLID-DL, SMCC, ESMCC, QIRLM, and WEBRC <xref target="RFC3738" />.
        </t>
        <t>
            CBACC addresses a vulnerability to "overjoining", a condition in which receivers
@@ -143,12 +144,14 @@
            or all multicast traffic across the network during high congestion.
        </t>
        <t>
-           CBACC provides a mechanism for networks to mitigate the impact of network overjoining by
-           sender advertising of bandwidth information sufficient to implement a fast-trip circuit
-           breaker <xref target="I-D.ietf-tsvwg-circuit-breaker" />
-           within a single network node which can specifically block the most problematic
-           flows, and which can ensure the remaining flows fit within desired network
-           parameters.
+           CBACC provides a mechanism for networks to mitigate the impact of
+           overjoining within a network by introducing a mechanism for
+           communicating the bandwidth of non-responsive flows from the sender
+           of the flow to the transit nodes forwarding the flow. The bandwidth
+           information is sufficient to implement a fast-trip circuit breaker
+           <xref target="I-D.ietf-tsvwg-circuit-breaker" /> within a single
+           network node which can specifically block or police flows when
+           receivers have overjoined the network's capacity.
        </t>
        <t>
            In conjunction with receiver counts (e.g. via <xref target="RFC6807" />)
@@ -156,14 +159,17 @@
            decisions during an overjoining condition.
        </t>
        <t>
-           In addition to streams using WEBRC, CBACC may also be suitable for use with other
-           traffic, both unicast and multicast, that does not respond to congestion by reducing
-           sending rates, including certain profiles of RTP <xref target="RFC3550" />
-           over either unicast or multicast, as well as several tunneling protocols (e.g. AMT
-           <xref target="RFC7450" /> and GRE <xref target="RFC2784" />) when they are known to carry
-           traffic that would be suitable for CBACC. A complete specification for use of CBACC
-           with unicast protocols and with tunneling protocols is out of scope for this document,
-           though the security issues section does mention a few special considerations for potential
+           In addition to streams using multicast receiver-driven congestion
+           control, CBACC may also be suitable for use with other traffic, both
+           unicast and multicast, that does not respond to congestion by
+           reducing sending rates, including certain profiles of RTP
+           <xref target="RFC3550" /> over either unicast or multicast, as well as
+           several tunneling protocols (e.g. AMT <xref target="RFC7450" /> and
+           GRE <xref target="RFC2784" />) when they are known to carry traffic
+           that would be suitable for CBACC. A complete specification for use
+           of CBACC with unicast protocols and with tunneling protocols is out
+           of scope for this document, though the security issues section does
+           mention a few special considerations for potential
            unicast usage.
        </t>
        <t>
@@ -197,9 +203,11 @@
            <c>egress interface</c><c>a downstream interface for a flow in a circuit breaker</c>
        </texttable>
        <t>
-           The key words "MUST", "MUST NOT", "REQUIRED", "SHALL",
-           "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to
-           be interpreted as described in <xref target="RFC2119" />.
+          The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+          NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED",
+          "MAY", and "OPTIONAL" in this document are to be interpreted as
+          described in BCP 14 [RFC2119] [RFC8174] when, and only when, they
+          appear in all capitals, as shown here.
        </t>
    </section>
 
@@ -209,9 +217,9 @@
             Provide rationale for the building block's granularity
        -->
        <t>
-           CBACC is defined as an independent congestion control building block instead
-           of as an extension to WEBRC because it would be an equally useful supplement
-           for other kinds of experimental receiver-driven multicast congestion control schemes,
+           CBACC is defined as an independent congestion control building block
+           because it would be a useful supplement
+           a wide variety of receiver-driven multicast congestion control schemes,
            such as <xref target="PLM" /> or other methods based on receiver-driven conformance
            to a measurement of available network bandwidth or congestion.
        </t>
@@ -242,7 +250,7 @@
            CBACC relies on the presence of CBACC-aware circuit breakers on a flow's
            transit path in order to provide congestion control in a network. In the absence
            of any CBACC-aware circuit breakers on a network path, CBACC constitutes a small
-           extra overhead to a flow that provides no additional value.
+           extra overhead to a flow without providing any additional value.
        </t>
        <t>
            CBACC provides a form of congestion control for massively scalable protocols
@@ -268,10 +276,12 @@
                to subscribed receivers of that flow that traffic has been blocked.
            </t>
            <t>
-               An effort is also made to notify downstream receivers when a flow is in danger of
-               being circuit broken in the near future. This gives applications an opportunity
+               The protocol also defines a way to notify downstream receivers when a flow is in danger of
+               being circuit broken in the near future. A CBACC-capable transport node SHOULD 
+               send this information when it is known, as described in section [TBD].
+               This gives applications an opportunity
                to gracefully shift to a lower-bandwidth version of the same content, when possible,
-               providing an early warning system against potential congestion.
+               providing an early warning system for avoiding congestion more smoothly.
            </t>
            <t>
                A Bandwidth Advertisement packet constitutes an "ingress meter"
@@ -279,9 +289,9 @@
                The configured bandwidth caps of egress interfaces likewise constitute "egress
                meters". However, the diagram in the referenced document is simplified by running
                the ingress and egress on the same network node. At the CBACC-aware circuit
-               breaker, that node has both pieces of information as soon as a Bandwidth
+               breaker, the CBACC node has both pieces of information as soon as a Bandwidth
                Advertisement is received, and can trip the circuit breaker if the aggregate
-               CBACC bandwidth exceeds the bandwidth available on any egress interfaces.
+               advertised CBACC bandwidth exceeds the actual bandwidth available on any egress interfaces.
            </t>
        </section>
 
@@ -290,19 +300,10 @@
                 Specification of logical packet-header fields
                 Abstract messages specifications
            -->
-           <section title="Introduction">
-               <t>
-                   The initial draft of this document proposes 2 different methods of encapsulating
-                   the Bandwidth Advertisement with a discussion of the known pros and cons of each. The
-                   intent is to solicit feedback from the community and then settle on one
-                   encapsulation (possibly a different, as yet unconsidered one).
-               </t>
-           </section>
-
            <section anchor="BandwidthAdv" title="Bandwidth Advertisement">
                <section title="As an IP header option">
                    <t>
-                       Bandwidth advertisement can appear as either an IPv4 header option (as in
+                       Bandwidth advertisements can appear as either an IPv4 header option (as in
                        Section 3.1 of <xref target="RFC0791" />) or as an IPv6 extension header
                        option (as in section 4.2 of <xref target="RFC2460" />). They have the same
                        layout:
@@ -312,7 +313,7 @@
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|     Type      |     Length    |B|D|         Reserved          |
+|     Type      |     Length    |B|D|P|   Res   |   Priority    |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                           Bandwidth                           |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -346,54 +347,6 @@
                        zeroed for the IPSEC ICV calculations. CBACC circuit breakers MAY change bits in
                        transit. The Bandwidth Advertisement header itself IS NOT protected by IPSEC security
                        services, but protection of other parts of the packet remain unchanged.
-                   </t>
-               </section>
-               <section title="As a UDP packet">
-                   <t>
-                       Bandwidth advertisements can appear as a UDP packet with destination port [TBD].
-                       Until and unless IANA assigns a value, this will be port number 1022, one of the
-                       experimental ports provided in Section 6 of <xref target="RFC4727" />. The UDP
-                       packet contains a payload with the following packet format:
-                   </t>
-                   <figure align="center" anchor="udp_layout">
-                       <artwork align="left"><![CDATA[
- 0                   1
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|B|D|         Reserved          |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                               |
-+      Bandwidth (32 bits)      +
-|                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-]]></artwork>
-                   </figure>
-                   <t>
-                       Using a dedicated UDP packet has the benefit of following the guidelines from
-                       section 2.2.5 of <xref target="RFC3269" />, that Reliable Multicast Building Blocks MUST
-                       initially define packet formats for use over UDP until such time as the protocol
-                       is sufficiently widely deployed and understood. However, since the Bandwidth
-                       Advertisement packets will be processed by intermediate network nodes while being
-                       transmitted along the same routing path as the corresponding data packets, it
-                       will be necessary to add an IP Router Alert option (<xref target="RFC2113" />
-                       and <xref target="RFC2711" />) to the appropriate packets to flag them for the
-                       circuit-breaker's examination. It's important to note that
-                       <xref target="RFC6398" /> specifically
-                       recommends against using the Router Alert option in the end-to-end open
-                       Internet, which may impede experimentation and would very likely impede early
-                       adoption.
-                   </t>
-                   <t>
-                       An additional disadvantage of UDP relative to the IP header option is
-                       that CBACC in UDP cannot be used for unicast tunnels, because the UDP port is the
-                       only discriminator for the Bandwidth Advertisement.
-                   </t>
-                   <t>
-                       <!-- "support for IPSEC MUST be explicitly shown", from
-                            https://tools.ietf.org/html/rfc3269#section-2.2.5 -->
-                       The UDP encapsulation DOES NOT work with IPSEC, because middle boxes can't
-                       unpack or modify the Bandwidth Advertisement packets. [TO BE REMOVED: Does this violate
-                       <xref target="RFC3269" /> section 2.2.5?]
                    </t>
                </section>
                <section title="Field definitions">
@@ -434,10 +387,39 @@
                            Indicates that the flow is in danger of being circuit-broken.
                        </t>
                    </section>
-                   <section title="Reserved bits">
+                   <section title="P (Police) bit">
+                       <t>
+                           Indicates that the flow should be policed instead of blocked. Flows
+                           marked for policing by the sender should have traffic proportionally
+                           dropped when bandwidth is needed, according to their priority.
+                           [TBD] Flesh this concept out, and decide whether it's actually viable.
+                           This was my attempt at addressing a suggestion from Bob Briscoe at IETF
+                           97 in ICCRG at the mic, IIRC.
+                           It probably requires more state, such as total desired policable bandwidth,
+                           total current policed bandwidth, and current policing bandwidth per-flow, plus some
+                           definition of how to decide between cutting off some flows and policing
+                           others. This may not be worth the hassle, but there are some use cases such
+                           as FEC repair traffic which might actually be nicer this way. However, it might
+                           also be possible to get the same effect by assigning priority to those repair
+                           flows. Things like video enhancement layers of course are probably better done
+                           as a complete cutoff.
+                       </t>
+                   </section>
+                   <section title="Res (Reserved bits)">
                        <t>
                            The sender MUST set all reserved bits to 0 when sending a CBACC control packet.
-                           Receivers MUST accept any value in the reserved bits.
+                           Receivers and CBACC-capable transit nodes MUST accept any value in the reserved bits.
+                       </t>
+                   </section>
+                   <section title="Priority">
+                       <t>
+                           The sender MAY indicate relative priorities of different streams from the same
+                           sender with this field. This is an 8-bit unsigned integer, and higher values
+                           are kept preferentially over other traffic from the same sender with lower
+                           priority values, so all flows with a lower priority value are circuit-broken
+                           before any flows with a higher priority value. Among multiple flows from the
+                           same sender with the same priority, the highest bandwidth flows are circuit-
+                           broken first.
                        </t>
                    </section>
                </section>
@@ -450,12 +432,12 @@
                    A CBACC circuit breaker holds the following state for each interface, for both
                    the inbound and outbound directions on that interface:
                    <list style="hanging" hangIndent="4">
-                       <t hangText="aggregate bandwidth">
+                       <t hangText="o  aggregate bandwidth:">
                            The sum of the bandwidths of all non-circuit-broken CBACC flows which
                            transit this interface in this direction.
                        </t>
-                       <t hangText="bandwidth limit">
-                           The maximum aggregate CBACC bandwidth allowed, not including
+                       <t hangText="o  bandwidth limit:">
+                           The maximum aggregate CBACC advertised bandwidth allowed, not including
                            circuit-broken flows. This may depend on administrative configuration
                            and congestion measurements for the network, whether from this node
                            or other nodes.
@@ -478,8 +460,8 @@
                            shared value should be used, or two separate independent values should
                            be used for the inbound and outbound directions for an interface.
                        </t>
-                       <t hangText="CBACC bandwidth warning threshold">
-                           A soft bandwidth threshold. When the aggregate CBACC bandwidth exceeds
+                       <t hangText="o  CBACC bandwidth warning threshold:">
+                           A soft bandwidth threshold. When the aggregate CBACC advertised bandwidth exceeds
                            this threshold, flows that would have been circuit-broken with a bandwidth
                            limit at this threshold MUST have the Danger bit set in the Bandwidth
                            Advertisement packets that are forwarded by this circuit breaker.
@@ -497,10 +479,10 @@
                    downstream interface and for which at least one CBACC Bandwidth Advertisement
                    packet has been received:
                    <list style="hanging" hangIndent="4">
-                       <t hangText="bandwidth">
+                       <t hangText="o  bandwidth:">
                            The bandwidth from the most receintly received Bandwidth Advertisement.
                        </t>
-                       <t hangText="ingress status">
+                       <t hangText="o  ingress status:">
                            One of the following values:<list style="empty">
                                <t>* 'subscribed'<vspace blankLines="0" />
                                    Indicates that the circuit breaker is subscribed upstream to the
@@ -520,7 +502,7 @@
                                </t>
                            </list>
                        </t>
-                       <t hangText="probe timer">
+                       <t hangText="o  probe timer:">
                            Used to periodically probe a flow in the 'pruned' state, to evaluate
                            returning to 'forwarding'.
                        </t>
@@ -529,7 +511,7 @@
                <t>
                    Flows additionally have a per-interface state for egress interfaces:
                    <list style="hanging" hangIndent="4">
-                       <t hangText="egress status">
+                       <t hangText="o  egress status:">
                            One of the following values:<list style="empty">
                                <t>* 'forwarding'<vspace blankLines="0" />
                                    Indicates that the flow is a non-circuit-broken flow
@@ -556,8 +538,8 @@
                    that may be sent at any time in the following 3 seconds. A CBACC sender MUST
                    send this value in a Bandwidth Advertisement packet once per second. The end result of
                    the traffic sent on the wire for a particular flow MUST honor this maximum bandwidth
-                   commitment, such that bandwidth measurements taken over any one-second period MUST
-                   NOT exceed any of prior 3 maximum Bandwidth Advertisements (or any of them, if
+                   commitment, such that bandwidth measurements taken over any sliding window one-second
+                   period MUST NOT exceed any of prior 3 maximum Bandwidth Advertisements (or any of them, if
                    fewer than 3 have been sent).
                </t>
                <t>
@@ -568,7 +550,7 @@
                    provide a capability for network operators to configure administrative biases
                    for specific sets of flows, and network operators SHOULD consider fairness
                    concerns as expressed in <xref target="RFC2914" /> section 3.2 and other
-                   relevant documents containing best practices.
+                   relevant documents describing best practices.
                </t>
                <t>
                    In particular, fairness metrics SHOULD favor multicast flows with
@@ -580,8 +562,8 @@
                    or when receiver counts can't be determined.
                </t>
                <t>
-                   Bandwidth Advertisement packets MUST NOT be sent by a sender more often than once per
-                   second.
+                   A CBACC sender MUST send Bandwidth Advertisements once per second. (Implementation-specific
+                   jitter in timer implementations not exceeding .1s is acceptable.)
                </t>
                <t>
                    If a circuit breaker receives more than 5 Bandwidth Advertisement packets for a
@@ -591,7 +573,7 @@
                </t>
                <t>
                    Flows which are currently circuit-broken on an egress interface are set to
-                   "blocked". When an flow on an egress interface is in blocked state, Bandwidth Advertisement
+                   "blocked". When a flow on an egress interface is in blocked state, Bandwidth Advertisement
                    packets MUST be forwarded except as described in the preceding paragraph,
                    the "Blocked" bit MUST be set to 1 before forwarding, and other traffic for
                    that flow MUST NOT be forwarded along that interface.
@@ -636,6 +618,7 @@
                </t>
                <t>
                    [TBD: examples with network diagrams and bandwidths?]
+                   [TBD: some internal structure on this section. "wall of text" was some feedback]
                </t>
        </section>
    </section>
@@ -774,8 +757,8 @@
 
    <section anchor="Acknowledgements" title="Acknowledgements">
        <t>
-           Many thanks to Devin Anderson for a detailed review and many great suggestions. Thanks
-           also to Cheng Jin and Scott Brown for early feedback.
+           Many thanks to Devin Anderson and Ben Kaduk for detailed reviews and many great suggestions. Thanks
+           also to Cheng Jin, Scott Brown, Miroslav Kaduk, and Bob Briscoe for their thoughtful contributions.
        </t>
    </section>
 
@@ -788,13 +771,9 @@
      <!--?rfc include="http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml"?-->
      &RFC0791;
 
-     &RFC2113;
-
      &RFC2119;
 
      &RFC2460;
-
-     &RFC2711;
 
      &RFC3048;
 
@@ -906,6 +885,7 @@
            for efficient massive scale content distribution via multicast, provided 
            network health can be ensured. Therefore, mechanisms to mitigate overjoining attacks while
            still permitting receiver-controlled congestion control are necessary.
+           [TBD: this whole section should be expanded and moved to a separate informational draft]
        </t>
        <figure align="center" anchor="overjoining_diagram">
            <artwork align="left"><![CDATA[
